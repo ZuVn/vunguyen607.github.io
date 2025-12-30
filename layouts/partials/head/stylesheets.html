@@ -1,71 +1,83 @@
+<!-- Styles -->
 {{ $defaultTheme := .Param "defaultTheme" | default "light" }}
 
-{{/* ---------- Critical CSS ---------- */}}
-{{ $critical := resources.Match "css/critical/*.css" }}
-{{ with $critical }}
-  {{ $criticalCSS := sort . "Name"
-    | resources.Concat "css/critical.css"
-    | resources.ExecuteAsTemplate "css/critical.css" .
-    | css.PostCSS
-  }}
-  <style>{{ $criticalCSS.Content | safeCSS }}</style>
+{{ $critical := sort (resources.Match "css/critical/*.css") "Name" | resources.Concat nil | resources.ExecuteAsTemplate nil . | css.PostCSS }}
+{{ $nonCritical := sort (resources.Match "css/non-critical/*.css") "Name" | resources.Concat "css/non-critical.css" | resources.ExecuteAsTemplate "css/non-critical.css" . | css.PostCSS }}
+{{ $prismDark := resources.Get "prism-themes/prism-gruvbox-dark.css" }}
+{{ $prismLight := resources.Get "prism-themes/prism-gruvbox-light.css" }}
+
+{{ if hugo.IsProduction }}
+  {{ $critical = $critical | resources.PostProcess }}
+  {{ $nonCritical = $nonCritical | fingerprint "sha512" | resources.PostProcess }}
+  {{ $prismDark = $prismDark | minify | fingerprint "sha512" }}
+  {{ $prismLight = $prismLight | minify | fingerprint "sha512" }}
 {{ end }}
 
-{{/* ---------- Non-critical CSS ---------- */}}
-{{ $nonCritical := resources.Match "css/non-critical/*.css" }}
-{{ with $nonCritical }}
-  {{ $nonCriticalCSS := sort . "Name"
-    | resources.Concat "css/non-critical.css"
-    | resources.ExecuteAsTemplate "css/non-critical.css" .
-    | css.PostCSS
-  }}
+<style>
+  /* stylelint-disable */
+  {{ $critical.Content | safeCSS }}
+  /* stylelint-enable */
+</style>
 
+<link
+  rel="preload"
+  href="{{ $nonCritical.RelPermalink }}"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
   {{ if hugo.IsProduction }}
-    {{ $nonCriticalCSS = $nonCriticalCSS | fingerprint "sha512" | resources.PostProcess }}
+    integrity="{{ $nonCritical.Data.Integrity }}"
   {{ end }}
+/>
 
-  <link
-    rel="preload"
-    href="{{ $nonCriticalCSS.RelPermalink }}"
-    as="style"
-    onload="this.onload=null;this.rel='stylesheet'"
-    {{ if hugo.IsProduction }}integrity="{{ $nonCriticalCSS.Data.Integrity }}"{{ end }}
-  />
+<!-- TODO Use prefetch when more widely supported -->
+<link
+  id="prism-dark"
+  rel="preload"
+  href="{{ $prismDark.RelPermalink }}"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
+  {{ if hugo.IsProduction }}integrity="{{ $prismDark.Data.Integrity }}"{{ end }}
+  {{ if eq $defaultTheme "light" }}disabled{{ end }}
+/>
 
-  <noscript>
+<!-- TODO Use prefetch when more widely supported -->
+<link
+  id="prism-light"
+  rel="preload"
+  href="{{ $prismLight.RelPermalink }}"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
+  {{ if hugo.IsProduction }}
+    integrity="{{ $prismLight.Data.Integrity }}"
+  {{ end }}
+  {{ if eq $defaultTheme "dark" }}disabled{{ end }}
+/>
+
+<noscript>
+  {{ if eq $defaultTheme "light" }}
     <link
       rel="stylesheet"
-      href="{{ $nonCriticalCSS.RelPermalink }}"
-      {{ if hugo.IsProduction }}integrity="{{ $nonCriticalCSS.Data.Integrity }}"{{ end }}
+      href="{{ $prismLight.RelPermalink }}"
+      {{ if hugo.IsProduction }}
+        integrity="{{ $prismLight.Data.Integrity }}"
+      {{ end }}
     />
-  </noscript>
-{{ end }}
-
-{{/* ---------- Prism themes ---------- */}}
-{{ with resources.Get "prism-themes/prism-gruvbox-dark.css" }}
-  {{ $dark := . }}
-  {{ if hugo.IsProduction }}
-    {{ $dark = $dark | fingerprint "sha512" | resources.PostProcess }}
+  {{ else }}
+    <link
+      rel="stylesheet"
+      href="{{ $prismDark.RelPermalink }}"
+      {{ if hugo.IsProduction }}
+        integrity="{{ $prismDark.Data.Integrity }}"
+      {{ end }}
+    />
   {{ end }}
-  <link
-    id="prism-dark"
-    rel="stylesheet"
-    href="{{ $dark.RelPermalink }}"
-    {{ if hugo.IsProduction }}integrity="{{ $dark.Data.Integrity }}"{{ end }}
-    {{ if eq $defaultTheme "light" }}disabled{{ end }}
-  />
-{{ end }}
 
-{{ with resources.Get "prism-themes/prism-gruvbox-light.css" }}
-  {{ $light := . }}
-  {{ if hugo.IsProduction }}
-    {{ $light = $light | fingerprint "sha512" | resources.PostProcess }}
-  {{ end }}
+
   <link
-    id="prism-light"
     rel="stylesheet"
-    href="{{ $light.RelPermalink }}"
-    {{ if hugo.IsProduction }}integrity="{{ $light.Data.Integrity }}"{{ end }}
-    {{ if eq $defaultTheme "dark" }}disabled{{ end }}
+    href="{{ $nonCritical.RelPermalink }}"
+    {{ if hugo.IsProduction }}
+      integrity="{{ $nonCritical.Data.Integrity }}"
+    {{ end }}
   />
-{{ end }}
+</noscript>
