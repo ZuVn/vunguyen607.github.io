@@ -19,12 +19,11 @@
 {{ $prismDark := resources.Get "prism-themes/prism-gruvbox-dark.css" }}
 {{ $prismLight := resources.Get "prism-themes/prism-gruvbox-light.css" }}
 
-{{/* Production processing */}}
+{{/* Production pipeline – fingerprint BEFORE PostProcess */}}
 {{ if hugo.IsProduction }}
-  {{ $critical = $critical | resources.PostProcess }}
-  {{ $nonCritical = $nonCritical | resources.PostProcess | fingerprint "sha512" }}
-  {{ $prismDark = $prismDark | resources.PostProcess | fingerprint "sha512" }}
-  {{ $prismLight = $prismLight | resources.PostProcess | fingerprint "sha512" }}
+  {{ $nonCritical = $nonCritical | fingerprint "sha512" | resources.PostProcess }}
+  {{ $prismDark = $prismDark | fingerprint "sha512" | resources.PostProcess }}
+  {{ $prismLight = $prismLight | fingerprint "sha512" | resources.PostProcess }}
 {{ end }}
 
 <style>
@@ -60,6 +59,12 @@
 />
 
 <noscript>
+  <link
+    rel="stylesheet"
+    href="{{ $nonCritical.RelPermalink }}"
+    {{ if hugo.IsProduction }}integrity="{{ $nonCritical.Data.Integrity }}"{{ end }}
+  />
+
   {{ if eq $defaultTheme "light" }}
     <link
       rel="stylesheet"
@@ -73,10 +78,4 @@
       {{ if hugo.IsProduction }}integrity="{{ $prismDark.Data.Integrity }}"{{ end }}
     />
   {{ end }}
-
-  <link
-    rel="stylesheet"
-    href="{{ $nonCritical.RelPermalink }}"
-    {{ if hugo.IsProduction }}integrity="{{ $nonCritical.Data.Integrity }}"{{ end }}
-  />
 </noscript>
