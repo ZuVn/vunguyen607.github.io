@@ -25,7 +25,7 @@ enableRobotsTXT = true
 
 [imaging]
   # JPEG and WebP image processing quality, defaults to 75%
-  #quality = 75
+  #quality = 100
 
 [outputs]
   home = ["html", "rss", "searchIndex"]
